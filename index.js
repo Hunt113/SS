@@ -13,6 +13,7 @@ const CLIENT_ID = '1508833085641330820';
 const LOG_CHANNEL_ID = "1500980048847438004"; // Your requested log channel
 const CHECK_REQUIRED_ROLE = "〆│ STAFF";
 const ROLE_REQUIRED_ROLE = "〆│ Ranker";
+const PROMOTION_REQUIRED_ROLE = "〆│ --HC--"; // Role allowed to use the /promotion command
 
 const TARGET_SHIRTS = {
     "126872339221292": "Killa Rat Access 🔪",
@@ -54,7 +55,13 @@ const commands = [
         .setName('remove')
         .setDescription('Remove a role from a server member')
         .addUserOption(option => option.setName('user').setDescription('The member to remove the role from').setRequired(true))
-        .addRoleOption(option => option.setName('role').setDescription('The role to remove').setRequired(true))
+        .addRoleOption(option => option.setName('role').setDescription('The role to remove').setRequired(true)),
+    new SlashCommandBuilder()
+        .setName('promotion')
+        .setDescription('Announce a staff member promotion')
+        .addUserOption(option => option.setName('user').setDescription('The staff member being promoted').setRequired(true))
+        .addRoleOption(option => option.setName('role').setDescription('The new role they are receiving').setRequired(true))
+        .addStringOption(option => option.setName('reason').setDescription('The reason for the promotion').setRequired(false))
 ];
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
@@ -171,6 +178,67 @@ client.on('interactionCreate', async interaction => {
             return interaction.reply({ content: `✅ Successfully removed the role **${targetRole.name}** from **${targetUser.user.username}**.` });
         } catch (error) {
             return interaction.reply({ content: `⚠️ Failed to remove role.`, ephemeral: true });
+        }
+    }
+
+    if (interaction.commandName === 'promotion') {
+        const hcRole = interaction.guild.roles.cache.find(r => r.name === PROMOTION_REQUIRED_ROLE);
+        if (!hcRole) return interaction.reply({ content: `⚠️ System Error: Role **${PROMOTION_REQUIRED_ROLE}** not found.`, ephemeral: true });
+
+        // Rule 1: Command executor must have the HC role or higher
+        const isHCOrHigher = member.roles.cache.some(r => r.position >= hcRole.position);
+        if (!isHCOrHigher) return interaction.reply({ content: `❌ This command is restricted to **${PROMOTION_REQUIRED_ROLE}** and higher.`, ephemeral: true });
+
+        const targetUser = interaction.options.getMember('user');
+        const targetRole = interaction.options.getRole('role');
+        const reason = interaction.options.getString('reason') || 'No reason provided';
+
+        if (!targetUser) return interaction.reply({ content: `❌ That user is not in this server.`, ephemeral: true });
+
+        // Rule 2: Cannot use the command on someone with an equal or higher role than the executor
+        if (targetUser.roles.highest.position >= member.roles.highest.position) {
+            return interaction.reply({ content: `❌ Strict Protection: You cannot promote someone who has an equal or higher role than you!`, ephemeral: true });
+        }
+
+        // Rule 3: Cannot assign a role that is equal to or higher than the executor's own highest role
+        if (targetRole.position >= member.roles.highest.position) {
+            return interaction.reply({ content: `❌ Strict Protection: You cannot assign a role that is equal to or higher than your own highest role!`, ephemeral: true });
+        }
+
+        // Rule 4: Bot hierarchy check
+        const botMember = interaction.guild.members.me;
+        if (targetRole.position >= botMember.roles.highest.position) {
+            return interaction.reply({ content: `❌ I cannot manage that role because it is positioned higher than my bot role.`, ephemeral: true });
+        }
+
+        try {
+            // Add the new role to the member
+            await targetUser.roles.add(targetRole);
+
+            // Create the custom visual layout matching your confirmation photo template
+            const promoEmbed = new EmbedBuilder()
+                .setTitle('Staff Promotion')
+                .setColor(0x2ECC71) // Solid green bar layout matching your photo frame
+                .setDescription(
+                    `🌟 **New Promotion Announced!**\n\n` +
+                    `*"Every rank earned is a reflection of the effort and dedication you pour into this community. Keep climbing — the top is just the beginning."*\n\n` +
+                    `👤 **Promoted**\n<@${targetUser.id}>\n\n` +
+                    `🏆 **New Role**\n<@&${targetRole.id}>\n\n` +
+                    `📋 **Reason**\n${reason}\n\n` +
+                    `✅ **Promoted By**\n<@${interaction.user.id}>\n\n` +
+                    `📅 **Date**\n${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} at ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`
+                )
+                .setFooter({ text: `Congratulations, ${targetUser.user.username}! You've earned it. 🔥` });
+
+            // Send standard public notification alongside the visual container
+            return interaction.reply({ 
+                content: `🐀 <@${targetUser.id}> just got promoted! The grind pays off. 💚`, 
+                embeds: [promoEmbed] 
+            });
+
+        } catch (error) {
+            console.error(error);
+            return interaction.reply({ content: `⚠️ Failed to complete promotion sequence. Make sure my bot role is placed above the target role.`, ephemeral: true });
         }
     }
 });
