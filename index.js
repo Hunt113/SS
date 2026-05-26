@@ -11,6 +11,7 @@ const CLIENT_ID = '1508833085641330820';
 
 // Logging and Permissions Configurations
 const LOG_CHANNEL_ID = "1500980048847438004"; // Your requested log channel
+const PROMOTION_CHANNEL_ID = "1236070119864275034"; // Paste your ✅│staff-promotion channel ID here!
 const CHECK_REQUIRED_ROLE = "〆│ STAFF";
 const ROLE_REQUIRED_ROLE = "〆│ Ranker";
 const PROMOTION_REQUIRED_ROLE = "--HC--"; // Role allowed to use the /promotion command
@@ -79,7 +80,7 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
 function validateRoleAction(interaction, member, rankerRole, targetUser, targetRole) {
     const isRankerOrHigher = member.roles.cache.some(r => r.position >= rankerRole.position);
     if (!isRankerOrHigher) {
-        interaction.reply({ content: `❌ This command is restricted to **${ROLE_REQUIRED_ROLE}** and higher roles.`, ephemeral: true });
+        interaction.reply({ content: `❌ This command is restricted to **${ROLE_REQUIRED_ROLE}** and higher roles.`, refined: true, ephemeral: true });
         return false;
     }
     if (!targetUser) {
@@ -211,14 +212,20 @@ client.on('interactionCreate', async interaction => {
             return interaction.reply({ content: `❌ I cannot manage that role because it is positioned higher than my bot role.`, ephemeral: true });
         }
 
+        // Target the automated promotion announcement channel
+        const promoChannel = interaction.guild.channels.cache.get(PROMOTION_CHANNEL_ID);
+        if (!promoChannel) {
+            return interaction.reply({ content: `⚠️ System Error: Promotion channel with ID \`${PROMOTION_CHANNEL_ID}\` was not found in this server.`, ephemeral: true });
+        }
+
         try {
             // Add the new role to the member
             await targetUser.roles.add(targetRole);
 
-            // Create the custom visual layout matching your confirmation photo template
+            // Create the custom visual template embed layout
             const promoEmbed = new EmbedBuilder()
                 .setTitle('Staff Promotion')
-                .setColor(0x2ECC71) // Solid green bar layout matching your photo frame
+                .setColor(0x2ECC71) 
                 .setDescription(
                     `🌟 **New Promotion Announced!**\n\n` +
                     `*"Every rank earned is a reflection of the effort and dedication you pour into this community. Keep climbing — the top is just the beginning."*\n\n` +
@@ -230,11 +237,14 @@ client.on('interactionCreate', async interaction => {
                 )
                 .setFooter({ text: `Congratulations, ${targetUser.user.username}! You've earned it. 🔥` });
 
-            // Send standard public notification alongside the visual container
-            return interaction.reply({ 
+            // Automatically route the entire content message and embed layout directly to the target channel
+            await promoChannel.send({ 
                 content: `🐀 <@${targetUser.id}> just got promoted! The grind pays off. 💚`, 
                 embeds: [promoEmbed] 
             });
+
+            // Respond privately to the HC member confirming it was sent successfully
+            return interaction.reply({ content: `✅ Promotion successfully sent to <#${PROMOTION_CHANNEL_ID}>!`, ephemeral: true });
 
         } catch (error) {
             console.error(error);
