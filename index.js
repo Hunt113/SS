@@ -1,25 +1,8 @@
 // 1. Load the environment variables first thing!
 require('dotenv').config(); 
 
-const { Client, GatewayIntentBits } = require('discord.js');
-const express = require('express');
-
-// Setting up the Express server so Render stays awake
-const app = express();
-const PORT = process.env.PORT || 10000;
-
-app.get('/', (req, res) => res.send('Bot is active!'));
-app.listen(PORT, () => console.log(`Listening on port ${PORT}`));
-
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
-
-client.once('ready', () => {
-    console.log(`${client.user.tag} is online!`);
-});
-
-// 2. Log in using the hidden variable instead of a raw string
-client.login(process.env.DISCORD_TOKEN);
 const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, AuditLogEvent } = require('discord.js');
+const express = require('express');
 const axios = require('axios');
 
 // --- CONFIGURATION ---
@@ -40,15 +23,23 @@ const TARGET_SHIRTS = {
 };
 // ---------------------
 
+// Setting up the Express server so Render stays awake
+const app = express();
+const PORT = process.env.PORT || 10000;
+
+app.get('/', (req, res) => res.send('Bot is active!'));
+app.listen(PORT, () => console.log(`Listening on port ${PORT}`));
+
 const client = new Client({ 
     intents: [
         GatewayIntentBits.Guilds, 
         GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMessages,
         GatewayIntentBits.GuildModeration // Required to receive audit log entries
     ] 
 });
 
-// 1. Register Slash Commands
+// Register Slash Commands
 const commands = [
     new SlashCommandBuilder()
         .setName('check')
@@ -104,7 +95,7 @@ function validateRoleAction(interaction, member, rankerRole, targetUser, targetR
     return true; 
 }
 
-// 2. Handle Slash Command Interactions
+// Handle Slash Command Interactions
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
     const member = interaction.member;
@@ -184,25 +175,20 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-// ========================================================
-// 3. UNIVERSAL AUDIT LOG LISTENER (EVERYTHING LOGGED HERE)
-// ========================================================
+// Universal Audit Log Listener
 client.on('guildAuditLogEntryCreate', async (auditLogEntry, guild) => {
     const logChannel = guild.channels.cache.get(LOG_CHANNEL_ID);
-    if (!logChannel) return; // Channel doesn't exist or isn't cached
+    if (!logChannel) return; 
 
     const { action, executorId, targetId, changes } = auditLogEntry;
     
-    // Resolve clean execution strings
     const executor = client.users.cache.get(executorId) || await client.users.fetch(executorId).catch(() => null);
     const executorTag = executor ? `${executor.username}` : `Unknown (${executorId})`;
     
-    // Human-readable titles depending on what action was triggered inside the server
     let actionTitle = "⚙️ Audit Log Activity";
     let dynamicFieldName = "Target Info";
     let dynamicFieldValue = `ID: ${targetId}`;
 
-    // Clean up title structures based on common categories
     if (action === AuditLogEvent.MemberRoleUpdate) {
         actionTitle = "⚠️ Role Modified on Member";
         dynamicFieldName = "Member";
@@ -224,27 +210,20 @@ client.on('guildAuditLogEntryCreate', async (auditLogEntry, guild) => {
         dynamicFieldName = "Channel Name Reference";
     }
 
-    // Generate the Dynamic Embed
     const logEmbed = new EmbedBuilder()
         .setTitle(actionTitle)
-        .setColor(0xFF0000) // Strictly Red Embed border as requested
-        .addFields(
-            { name: dynamicFieldName, value: dynamicFieldValue, inline: true }
-        )
+        .setColor(0xFF0000) 
+        .addFields({ name: dynamicFieldName, value: dynamicFieldValue, inline: true })
         .setFooter({ text: `Member: ${executorTag} • By: ${executorTag} • ${new Date().toLocaleString()}` });
 
-    // Format changes details nicely if changes exist (like exact role added or property modified)
     if (changes && changes.length > 0) {
         let updateDetails = [];
         for (const change of changes) {
             if (change.key === '$add') {
-                // Roles added
                 updateDetails.push(`**Role(s) Added:** <@&${change.new[0].id}>`);
             } else if (change.key === '$remove') {
-                // Roles removed
                 updateDetails.push(`**Role(s) Removed:** <@&${change.new[0].id}>`);
             } else {
-                // Fallback for names, permissions modifications, settings updates, etc.
                 updateDetails.push(`**${change.key}:** \`${change.old || 'None'}\` ➔ \`${change.new || 'None'}\``);
             }
         }
@@ -254,14 +233,14 @@ client.on('guildAuditLogEntryCreate', async (auditLogEntry, guild) => {
         }
     }
 
-    // Inject the final execution entity mapping info right into the core layout template form
     logEmbed.addFields({ name: "Added by / Executed by", value: `<@${executorId}>`, inline: true });
 
-    // Send to your designated logs channel
     await logChannel.send({ embeds: [logEmbed] }).catch(err => console.error("Failed to send log message:", err));
 });
 
 client.on('ready', () => {
     console.log(`🤖 Logged in as ${client.user.tag}!`);
 });
-process.env.DISCORD_TOKEN
+
+// Safe Cloud Authentication Entry Point
+process.env.DISCORD_TOKEN;
