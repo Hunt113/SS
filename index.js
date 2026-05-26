@@ -13,7 +13,7 @@ const CLIENT_ID = '1508833085641330820';
 const LOG_CHANNEL_ID = "1500980048847438004"; // Your requested log channel
 const CHECK_REQUIRED_ROLE = "〆│ STAFF";
 const ROLE_REQUIRED_ROLE = "〆│ Ranker";
-const PROMOTION_REQUIRED_ROLE = "〆│ --HC--"; // Role allowed to use the /promotion command
+const PROMOTION_REQUIRED_ROLE = "--HC--"; // Role allowed to use the /promotion command
 
 const TARGET_SHIRTS = {
     "126872339221292": "Killa Rat Access 🔪",
