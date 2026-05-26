@@ -1,7 +1,7 @@
 // 1. Load the environment variables first thing!
 require('dotenv').config(); 
 
-const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, AuditLogEvent } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, AuditLogEvent, ActivityType } = require('discord.js');
 const express = require('express');
 const axios = require('axios');
 
@@ -238,9 +238,13 @@ client.on('guildAuditLogEntryCreate', async (auditLogEntry, guild) => {
     await logChannel.send({ embeds: [logEmbed] }).catch(err => console.error("Failed to send log message:", err));
 });
 
+// Set up status and print online message
 client.on('ready', () => {
     console.log(`🤖 Logged in as ${client.user.tag}!`);
+    
+    // Sets custom status activity: "Playing Sewer Soldier On Top"
+    client.user.setActivity('Sewer Soldier On Top', { type: ActivityType.Playing });
 });
 
 // Safe Cloud Authentication Entry Point
-process.env.DISCORD_TOKEN;
+client.login(TOKEN);
