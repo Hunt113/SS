@@ -169,72 +169,56 @@ client.on('interactionCreate', async interaction => {
 
 
     if (interaction.commandName === 'warn') {
-        const hcRole = interaction.guild.roles.cache.find(r => r.name === PROMOTION_REQUIRED_ROLE);
-        if (!hcRole) return interaction.reply({ content: `⚠️ System Error: Role **${PROMOTION_REQUIRED_ROLE}** not found.`, ephemeral: true });
+    const hcRole = interaction.guild.roles.cache.find(r => r.name === PROMOTION_REQUIRED_ROLE);
+    if (!hcRole) return interaction.reply({ content: `⚠️ System Error: Role **${PROMOTION_REQUIRED_ROLE}** not found.`, ephemeral: true });
 
-        // Rule 1: Command executor must have the HC role or higher
-        const isHCOrHigher = member.roles.cache.some(r => r.position >= hcRole.position);
-        if (!isHCOrHigher) return interaction.reply({ content: `❌ This command is restricted to **${PROMOTION_REQUIRED_ROLE}** and higher ranks.`, ephemeral: true });
+    const isHCOrHigher = member.roles.cache.some(r => r.position >= hcRole.position);
+    if (!isHCOrHigher) return interaction.reply({ content: `❌ This command is restricted to **${PROMOTION_REQUIRED_ROLE}** and higher ranks.`, ephemeral: true });
 
-        const targetUser = interaction.options.getMember('user');
-        const targetRole = interaction.options.getRole('role');
-        const reason = interaction.options.getString('reason');
+    const targetUser = interaction.options.getMember('user');
+    const targetRole = interaction.options.getRole('role');
+    const reason = interaction.options.getString('reason');
 
-        if (!targetUser) return interaction.reply({ content: `❌ That user is not in this server.`, ephemeral: true });
+    if (!targetUser) return interaction.reply({ content: `❌ That user is not in this server.`, ephemeral: true });
 
-        // Rule 2: Strict validation check - Only allows Warning 1⚠️ or Warning 2⚠️
-        if (!WARNING_ALLOWED_ROLES.includes(targetRole.name)) {
-            return interaction.reply({ 
-                content: `❌ Invalid Role! This command can only be used to issue the following roles:\n\`│Warning 1⚠️\` or \`│Warning 2⚠️\``, 
-                ephemeral: true 
-            });
-        }
+    if (!WARNING_ALLOWED_ROLES.includes(targetRole.name)) {
+        return interaction.reply({ 
+            content: `❌ Invalid Role! This command can only be used to issue the following roles:\n\`│Warning 1⚠️\` or \`│Warning 2⚠️\``, 
+            ephemeral: true 
+        });
+    }
 
-        // Rule 3: Hierarchy enforcement - Cannot warn equal or higher roles than executor
-        if (targetUser.roles.highest.position >= member.roles.highest.position) {
-            return interaction.reply({ content: `❌ Strict Protection: You cannot warn someone who has an equal or higher role than you!`, ephemeral: true });
-        }
+    if (targetUser.roles.highest.position >= member.roles.highest.position) {
+        return interaction.reply({ content: `❌ Strict Protection: You cannot warn someone who has an equal or higher role than you!`, ephemeral: true });
+    }
 
-        // Rule 4: Bot hierarchy check
-        const botMember = interaction.guild.members.me;
-        if (targetRole.position >= botMember.roles.highest.position) {
-            return interaction.reply({ content: `❌ I cannot assign that role because it is positioned higher than my bot role.`, ephemeral: true });
-        }
+    const botMember = interaction.guild.members.me;
+    if (targetRole.position >= botMember.roles.highest.position) {
+        return interaction.reply({ content: `❌ I cannot assign that role because it is positioned higher than my bot role.`, ephemeral: true });
+    }
 
-        const warnChannel = interaction.guild.channels.cache.get(WARNING_CHANNEL_ID);
-        if (!warnChannel) {
-            return interaction.reply({ content: `⚠️ System Error: Warning channel with ID \`${WARNING_CHANNEL_ID}\` was not found.`, ephemeral: true });
-        }
+    const warnChannel = interaction.guild.channels.cache.get(WARNING_CHANNEL_ID);
+    if (!warnChannel) {
+        return interaction.reply({ content: `⚠️ System Error: Warning channel with ID \`${WARNING_CHANNEL_ID}\` was not found.`, ephemeral: true });
+    }
 
-        try {
-            // Give the target warning role to the member
-            await targetUser.roles.add(targetRole);
+    try {
+        await targetUser.roles.add(targetRole);
 
-            // Create the clean visual embed log
-            const warnEmbed = new EmbedBuilder()
-                .setTitle('⚠️ Staff Warning Issued')
-                .setColor(0xE74C3C) // Red side panel bar
-                .setDescription(
-                    `👤 **Target User**\n<@${targetUser.id}> (${targetUser.user.username})\n\n` +
-                    `🏷️ **Warning Level**\n<@&${targetRole.id}>\n\n` +
-                    `📋 **Reason for Issuance**\n${reason}\n\n` +
-                    `🛡️ **Issued By**\n<@${interaction.user.id}>\n\n` +
-                    `📅 **Timestamp**\n${new Date().toLocaleString('en-US')}`
-                
-                .setFooter({ text: `Community Safety & Moderation Log` });
+        const warnEmbed = new EmbedBuilder()
+            .setTitle('⚠️ Staff Warning Issued')
+            .setColor(0xE74C3C)
+            .setDescription(`👤 **Target User**\n<@${targetUser.id}> (${targetUser.user.username})\n\n🏷️ **Warning Level**\n<@&${targetRole.id}>\n\n📋 **Reason for Issuance**\n${reason}\n\n🛡️ **Issued By**\n<@${interaction.user.id}>\n\n📅 **Timestamp**\n${new Date().toLocaleString('en-US')}`)
+            .setFooter({ text: 'Community Safety & Moderation Log' });
 
-            // Send directly to your logged infractions channel
-            await warnChannel.send({ embeds: [warnEmbed] });
+        await warnChannel.send({ embeds: [warnEmbed] });
+        return interaction.reply({ content: `✅ Warning successfully logged and applied to <@${targetUser.id}>.`, ephemeral: true });
 
-            return interaction.reply({ content: `✅ Warning successfully logged and applied to <@${targetUser.id}>.`, ephemeral: true });
-
-        } catch (error) {
-            console.error(error);
-            return interaction.reply({ content: `⚠️ Failed to execute warning sequence. Ensure my bot role is high up in the server settings.`, ephemeral: true });
-        }
+    } catch (error) {
+        console.error(error);
+        return interaction.reply({ content: `⚠️ Failed to execute warning sequence. Ensure my bot role is high up in the server settings.`, ephemeral: true });
     }
 }
-
     if (interaction.commandName === 'remove') {
         const rankerRole = interaction.guild.roles.cache.find(r => r.name === ROLE_REQUIRED_ROLE);
         if (!rankerRole) return interaction.reply({ content: `⚠️ System Error: Role **${ROLE_REQUIRED_ROLE}** not found.`, ephemeral: true });
