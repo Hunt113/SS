@@ -220,7 +220,7 @@ client.on('interactionCreate', async interaction => {
                     `📋 **Reason for Issuance**\n${reason}\n\n` +
                     `🛡️ **Issued By**\n<@${interaction.user.id}>\n\n` +
                     `📅 **Timestamp**\n${new Date().toLocaleString('en-US')}`
-                )
+                
                 .setFooter({ text: `Community Safety & Moderation Log` });
 
             // Send directly to your logged infractions channel
