@@ -166,10 +166,7 @@ client.on('interactionCreate', async interaction => {
             return interaction.reply({ content: `⚠️ Failed to add role.`, ephemeral: true });
         }
     }
-    } catch (error) {
-            return interaction.reply({ content: `⚠️ Failed to add role.`, ephemeral: true });
-        }
-    }
+
 
     if (interaction.commandName === 'warn') {
         const hcRole = interaction.guild.roles.cache.find(r => r.name === PROMOTION_REQUIRED_ROLE);
