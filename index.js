@@ -38,7 +38,6 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds, 
         GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildMessages,
         GatewayIntentBits.GuildModeration // Required to receive audit log entries
     ] 
 });
